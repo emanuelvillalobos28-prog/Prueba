@@ -424,7 +424,7 @@ elif menu == "Torneos Eliminación Directa":
 
             t = Table(data_tabla, colWidths=[120, 240, 120, 200])
             t.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4e78')),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000000')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
