@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import math
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -188,23 +188,25 @@ elif menu == "Torneos Eliminación Directa":
 
     if "jugadores_ed" not in st.session_state:
         st.session_state.jugadores_ed = [
-            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina", "Daniel Duarte",
-            "Saúl Ventura", "Jorge Castañeda", "Rogelio Ramos", "Mynor García"
+            "The Underdogs", "Serve Aces Wild", "Bye Bye Birdies", "Smash Bros.",
+            "Court Jesters", "Sets on the Beach", "Game of Throws", "Paddle Snakes",
+            "Netflix & Win", "Spin Doctors", "Net Results", "Ball Busters",
+            "Shank You Very Much", "The Rally Tally", "Hit Happens"
         ]
 
     if "ed_mesas" not in st.session_state:
-        st.session_state.ed_mesas = {}  # (ronda, match_idx) -> (mesas_j1, mesas_j2)
+        st.session_state.ed_mesas = {}  # (ronda_idx, match_idx) -> (mesas_j1, mesas_j2)
 
     sub_menu_ed = st.sidebar.radio("Secciones Eliminación Directa", [
         "Gestión de Participantes", 
-        "Cuadro de Llaves Vertical y Resultados",
-        "Exportar Cuadro Vertical a PDF"
+        "Cuadro Estilo Llaves y Resultados",
+        "Exportar Cuadro a PDF"
     ])
 
     if sub_menu_ed == "Gestión de Participantes":
         st.markdown("### 📝 Registro de Participantes - Eliminación Directa")
         
-        nuevo_j_ed = st.text_input("Nombre del Jugador o Club:")
+        nuevo_j_ed = st.text_input("Nombre del Jugador o Equipo:")
         if st.button("Agregar Participante ED"):
             if nuevo_j_ed and nuevo_j_ed not in st.session_state.jugadores_ed:
                 st.session_state.jugadores_ed.append(nuevo_j_ed)
@@ -213,7 +215,7 @@ elif menu == "Torneos Eliminación Directa":
             elif not nuevo_j_ed:
                 st.warning("Escribe un nombre válido.")
             else:
-                st.info("El jugador ya está en la lista.")
+                st.info("El participante ya está en la lista.")
 
         st.markdown("---")
         st.markdown("### 📋 Lista Actual")
@@ -229,102 +231,128 @@ elif menu == "Torneos Eliminación Directa":
         else:
             st.info("No hay participantes inscritos.")
 
-    elif sub_menu_ed == "Cuadro de Llaves Vertical y Resultados":
-        st.markdown("### ⚡ Cuadro Vertical de Eliminación Directa")
-        st.write("Ingresa las **mesas ganadas** por cada jugador en cada enfrentamiento. El ganador avanzará automáticamente a la siguiente fase.")
-        
+    elif sub_menu_ed == "Cuadro Estilo Llaves y Resultados":
+        st.markdown("### 🏆 Cuadro Oficial de Eliminación Directa")
+        st.write("Visualización exacta en celdas por enfrentamiento. Ingresa las mesas ganadas para definir quién avanza automáticamente.")
+
         jugadores = st.session_state.jugadores_ed
-        
         if len(jugadores) < 2:
-            st.warning("Se necesitan al menos 2 jugadores para generar las llaves.")
+            st.warning("Se necesitan al menos 2 participantes para generar el cuadro.")
         else:
-            # Rellenar con BYE si no es potencia de 2
+            # Calcular potencia de 2 exacta y rellenar con BYE
             next_power = 2 ** math.ceil(math.log2(len(jugadores)))
             lista_padded = list(jugadores)
             while len(lista_padded) < next_power:
-                lista_padded.append("BYE (Pase libre)")
+                lista_padded.append("BYE")
 
             total_rondas = int(math.log2(next_power))
-            ronda_actual_jugadores = lista_padded
             
+            # Construcción iterativa de rondas basadas en los resultados de la ronda anterior
+            ronda_actual_equipos = lista_padded
+            ganadores_por_ronda = []
+
             for r in range(1, total_rondas + 1):
-                nombre_ronda = f"Ronda {r}"
+                partidos_en_ronda = len(ronda_actual_equipos) // 2
+                ganadores_esta_ronda = []
+                
+                # Nombres de fases personalizados
                 if r == total_rondas:
-                    nombre_ronda = "🏆 GRAN FINAL"
+                    fase_titulo = "🏆 GRAN FINAL"
                 elif r == total_rondas - 1:
-                    nombre_ronda = "🔥 Semifinales"
+                    fase_titulo = "🔥 SEMIFINALES"
                 elif r == total_rondas - 2:
-                    nombre_ronda = "⚡ Cuartos de Final"
+                    fase_titulo = "⚡ CUARTOS DE FINAL"
+                else:
+                    fase_titulo = f"Ronda {r} (R{next_power//(2**(r-1))})"
 
                 st.markdown(f"---")
-                st.markdown(f"### 📍 {nombre_ronda}")
-                
-                siguiente_ronda = []
-                partidos_en_ronda = len(ronda_actual_jugadores) // 2
-                
+                st.markdown(f"### {fase_titulo}")
+
                 for idx in range(partidos_en_ronda):
-                    j1 = ronda_actual_jugadores[idx * 2]
-                    j2 = ronda_actual_jugadores[idx * 2 + 1]
-                    
-                    st.markdown(f"**Enfrentamiento {idx+1}:** {j1} vs {j2}")
-                    
+                    j1 = ronda_actual_equipos[idx * 2]
+                    j2 = ronda_actual_equipos[idx * 2 + 1]
+
                     key_res = (r, idx)
                     datos_previos = st.session_state.ed_mesas.get(key_res, (0, 0))
-                    
-                    # Manejo automático de BYE
-                    if "BYE" in j1:
-                        ganador = j2.replace(" (Pase libre)", "")
-                        st.info(f"👉 Pase libre directo para: **{j2}**")
-                    elif "BYE" in j2:
-                        ganador = j1.replace(" (Pase libre)", "")
-                        st.info(f"👉 Pase libre directo para: **{j1}**")
-                    else:
-                        col1, col2, col3 = st.columns([2, 2, 3])
-                        with col1:
-                            m_j1 = st.number_input(f"Mesas ganadas ({j1})", min_value=0, value=datos_previos[0], key=f"ed_r{r}_m{idx}_j1")
-                        with col2:
-                            m_j2 = st.number_input(f"Mesas ganadas ({j2})", min_value=0, value=datos_previos[1], key=f"ed_r{r}_m{idx}_j2")
-                        with col3:
-                            st.write("")
-                            st.write("")
-                            if st.button("Guardar Partida", key=f"btn_ed_r{r}_m{idx}"):
-                                st.session_state.ed_mesas[key_res] = (m_j1, m_j2)
-                                st.success("¡Resultado guardado!")
-                                st.rerun()
+
+                    # Contenedor visual estilo celda de cuadro
+                    with st.container():
+                        st.markdown(f"**R{next_power//(2**(r-1))} · Game {idx+1}**")
                         
-                        # Determinar ganador por mesas ganadas
-                        if m_j1 > m_j2:
-                            ganador = j1
-                            st.success(f"✅ Ganador de la llave: **{j1}** ({m_j1} - {m_j2})")
-                        elif m_j2 > m_j1:
-                            ganador = j2
-                            st.success(f"✅ Ganador de la llave: **{j2}** ({m_j2} - {m_j1})")
-                        else:
-                            if m_j1 == 0 and m_j2 == 0 and key_res not in st.session_state.ed_mesas:
-                                ganador = f"Pendiente ({j1} vs {j2})"
-                                st.info("⏳ Pendiente de jugar / registrar mesas.")
+                        col_c1, col_c2, col_c3 = st.columns([3, 2, 3])
+                        
+                        with col_c1:
+                            st.markdown(f"""
+                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #f8fbff; margin-bottom: 2px;">
+                                <b>{j1}</b>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            st.markdown(f"""
+                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #f8fbff;">
+                                <b>{j2}</b>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                        with col_c2:
+                            if j1 == "BYE":
+                                st.info("Pase libre")
+                                m_j1, m_j2 = 0, 1
+                            elif j2 == "BYE":
+                                st.info("Pase libre")
+                                m_j1, m_j2 = 1, 0
                             else:
-                                ganador = f"Empate a definir ({j1} / {j2})"
-                                st.warning("⚠️ Hay empate en mesas. Ingrese un marcador definitivo para definir el pase.")
-                    
-                    siguiente_ronda.append(ganador)
-                    st.markdown("")
-                
-                ronda_actual_jugadores = siguiente_ronda
-                
-            if len(ronda_actual_jugadores) == 1 and not "Pendiente" in ronda_actual_jugadores[0] and not "Empate" in ronda_actual_jugadores[0]:
+                                m_j1 = st.number_input(f"Mesas {j1}", min_value=0, value=datos_previos[0], key=f"r{r}_m{idx}_j1", label_visibility="collapsed")
+                                m_j2 = st.number_input(f"Mesas {j2}", min_value=0, value=datos_previos[1], key=f"r{r}_m{idx}_j2", label_visibility="collapsed")
+                                
+                                if st.button("Guardar", key=f"btn_r{r}_m{idx}"):
+                                    st.session_state.ed_mesas[key_res] = (m_j1, m_j2)
+                                    st.success("¡Guardado!")
+                                    st.rerun()
+
+                        with col_c3:
+                            if j1 == "BYE":
+                                ganador = j2
+                                st.markdown(f"➡️ **Avanza:** `{j2}`")
+                            elif j2 == "BYE":
+                                ganador = j1
+                                st.markdown(f"➡️ **Avanza:** `{j1}`")
+                            else:
+                                # Evaluar por mesas ganadas guardadas
+                                m_guardadas = st.session_state.ed_mesas.get(key_res, (0, 0))
+                                mg1, mg2 = m_guardadas[0], m_guardadas[1]
+                                
+                                if mg1 > mg2:
+                                    ganador = j1
+                                    st.markdown(f"✅ **Ganador:** `{j1}`")
+                                elif mg2 > mg1:
+                                    ganador = j2
+                                    st.markdown(f"✅ **Ganador:** `{j2}`")
+                                else:
+                                    if mg1 == 0 and mg2 == 0 and key_res not in st.session_state.ed_mesas:
+                                        ganador = f"Pendiente (Game {idx+1})"
+                                        st.markdown("⏳ *Pendiente de resultado*")
+                                    else:
+                                        ganador = f"Empate (Game {idx+1})"
+                                        st.markdown("⚠️ *Empate en mesas*")
+
+                        ganadores_esta_ronda.append(ganador)
+                        st.markdown("")
+
+                ronda_actual_equipos = ganadores_esta_ronda
+
+            if len(ronda_actual_equipos) == 1 and "Pendiente" not in ronda_actual_equipos[0] and "Empate" not in ronda_actual_equipos[0]:
                 st.balloons()
-                st.success(f"🏆 ¡El Campeón Absoluto del Torneo Individual es: {ronda_actual_jugadores[0]}!")
+                st.success(f"🏆 ¡El Campeón Absoluto del Torneo es: {ronda_actual_equipos[0]}!")
 
-    elif sub_menu_ed == "Exportar Cuadro Vertical a PDF":
-        st.markdown("### 📄 Generar Reporte de Llaves en PDF (Formato Vertical)")
-        st.write("Haz clic en el botón para compilar el cuadro de eliminación directa y los resultados de mesas en un documento oficial vertical.")
+    elif sub_menu_ed == "Exportar Cuadro a PDF":
+        st.markdown("### 📄 Generar Reporte de Llaves en PDF (Formato Horizontal)")
+        st.write("Haz clic en el botón para compilar todo el cuadro de eliminación directa y sus celdas en un reporte profesional.")
 
-        def generar_pdf_eliminacion_vertical():
+        def generar_pdf_cuadro():
             buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=letter,
-                                    rightMargin=36, leftMargin=36,
-                                    topMargin=36, bottomMargin=36)
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(letter),
+                                    rightMargin=30, leftMargin=30,
+                                    topMargin=30, bottomMargin=30)
             
             elements = []
             styles = getSampleStyleSheet()
@@ -332,7 +360,7 @@ elif menu == "Torneos Eliminación Directa":
             title_style = ParagraphStyle(
                 'TitleStyle',
                 parent=styles['Heading1'],
-                fontSize=16,
+                fontSize=18,
                 textColor=colors.HexColor('#1f4e78'),
                 alignment=1,
                 spaceAfter=10
@@ -341,51 +369,48 @@ elif menu == "Torneos Eliminación Directa":
             subtitle_style = ParagraphStyle(
                 'SubTitleStyle',
                 parent=styles['Heading2'],
-                fontSize=11,
+                fontSize=12,
                 textColor=colors.HexColor('#333333'),
                 spaceAfter=10
             )
 
-            elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO INDIVIDUAL DE BILLAR</b>", title_style))
-            elements.append(Paragraph("<b>Modalidad: Eliminación Directa (Cuadro Vertical por Fases)</b>", subtitle_style))
+            elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO DE BILLAR</b>", title_style))
+            elements.append(Paragraph("<b>Modalidad: Eliminación Directa (Cuadro Completo con celdas y BYE)</b>", subtitle_style))
             elements.append(Spacer(1, 10))
 
-            mesas_dict = st.session_state.ed_mesas
             jugadores = st.session_state.jugadores_ed
-            
             next_power = 2 ** math.ceil(math.log2(max(2, len(jugadores))))
             lista_padded = list(jugadores)
             while len(lista_padded) < next_power:
                 lista_padded.append("BYE")
 
             total_rondas = int(math.log2(next_power))
-            
-            data_tabla = [["Fase", "Enfrentamiento", "Marcador (Mesas)", "Ganador que Avanza"]]
+            data_tabla = [["Fase", "Encuentro / Celda", "Marcador (Mesas)", "Ganador / Avanza"]]
             
             ronda_actual = lista_padded
             for r in range(1, total_rondas + 1):
-                nombre_fase = f"Ronda {r}"
+                fase_nombre = f"Ronda {r}"
                 if r == total_rondas:
-                    nombre_fase = "GRAN FINAL"
+                    fase_nombre = "GRAN FINAL"
                 elif r == total_rondas - 1:
-                    nombre_fase = "Semifinales"
+                    fase_nombre = "Semifinales"
                 elif r == total_rondas - 2:
-                    nombre_fase = "Cuartos de Final"
+                    fase_nombre = "Cuartos de Final"
 
                 siguiente_nivel = []
                 for idx in range(len(ronda_actual) // 2):
                     j1 = ronda_actual[idx * 2]
                     j2 = ronda_actual[idx * 2 + 1]
                     
-                    if "BYE" in j1:
-                        win = j2.replace(" (Pase libre)", "")
-                        marcador = "Pase directo"
-                    elif "BYE" in j2:
-                        win = j1.replace(" (Pase libre)", "")
-                        marcador = "Pase directo"
+                    if j1 == "BYE":
+                        win = j2
+                        marc = "Pase directo"
+                    elif j2 == "BYE":
+                        win = j1
+                        marc = "Pase directo"
                     else:
-                        m_val = mesas_dict.get((r, idx), (0, 0))
-                        marcador = f"{m_val[0]} - {m_val[1]}"
+                        m_val = st.session_state.ed_mesas.get((r, idx), (0, 0))
+                        marc = f"{m_val[0]} - {m_val[1]}"
                         if m_val[0] > m_val[1]:
                             win = j1
                         elif m_val[1] > m_val[0]:
@@ -393,11 +418,11 @@ elif menu == "Torneos Eliminación Directa":
                         else:
                             win = "Pendiente"
                             
-                    data_tabla.append([nombre_fase, f"{j1}\nvs\n{j2}", marcador, win])
+                    data_tabla.append([fase_nombre, f"{j1}\nvs\n{j2}", marc, win])
                     siguiente_nivel.append(win)
                 ronda_actual = siguiente_nivel
 
-            t = Table(data_tabla, colWidths=[100, 160, 100, 180])
+            t = Table(data_tabla, colWidths=[120, 240, 120, 200])
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4e78')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -410,8 +435,8 @@ elif menu == "Torneos Eliminación Directa":
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f5f8')]),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('TOPPADDING', (0, 1), (-1, -1), 6),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
             ]))
 
             elements.append(t)
@@ -419,11 +444,11 @@ elif menu == "Torneos Eliminación Directa":
             buffer.seek(0)
             return buffer
 
-        pdf_buffer = generar_pdf_eliminacion_vertical()
+        pdf_buffer = generar_pdf_cuadro()
         st.download_button(
-            label="📥 Descargar Cuadro Vertical en PDF",
+            label="📥 Descargar Cuadro Completo en PDF",
             data=pdf_buffer,
-            file_name="Cuadro_Eliminacion_Directa_Vertical.pdf",
+            file_name="Cuadro_Eliminacion_Directa.pdf",
             mime="application/pdf"
         )
 
