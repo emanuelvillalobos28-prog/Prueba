@@ -9,6 +9,23 @@ import io
 
 st.set_page_config(page_title="Gestión de Torneos de Billar", layout="wide")
 
+# ==========================================
+# CSS PERSONALIZADO PARA CORREGIR CONTRASTE
+# ==========================================
+st.markdown("""
+    <style>
+    /* Forzar texto blanco y fondo oscuro en las cajas de entrada de texto */
+    input {
+        color: #FFFFFF !important;
+        background-color: #2D3748 !important;
+    }
+    ::placeholder {
+        color: #A0AEC0 !important;
+        opacity: 1 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("🎱 Sistema de Torneos de Billar")
 
 # Menú principal con las 3 modalidades solicitadas
@@ -239,7 +256,6 @@ elif menu == "Torneos Eliminación Directa":
         if len(jugadores) < 2:
             st.warning("Se necesitan al menos 2 participantes para generar el cuadro.")
         else:
-            # Calcular potencia de 2 exacta y rellenar con BYE
             next_power = 2 ** math.ceil(math.log2(len(jugadores)))
             lista_padded = list(jugadores)
             while len(lista_padded) < next_power:
@@ -247,7 +263,6 @@ elif menu == "Torneos Eliminación Directa":
 
             total_rondas = int(math.log2(next_power))
             
-            # Construcción iterativa de rondas basadas en los resultados de la ronda anterior
             ronda_actual_equipos = lista_padded
             ganadores_por_ronda = []
 
@@ -255,7 +270,6 @@ elif menu == "Torneos Eliminación Directa":
                 partidos_en_ronda = len(ronda_actual_equipos) // 2
                 ganadores_esta_ronda = []
                 
-                # Nombres de fases personalizados
                 if r == total_rondas:
                     fase_titulo = "🏆 GRAN FINAL"
                 elif r == total_rondas - 1:
@@ -275,7 +289,6 @@ elif menu == "Torneos Eliminación Directa":
                     key_res = (r, idx)
                     datos_previos = st.session_state.ed_mesas.get(key_res, (0, 0))
 
-                    # Contenedor visual estilo celda de cuadro
                     with st.container():
                         st.markdown(f"**R{next_power//(2**(r-1))} · Game {idx+1}**")
                         
@@ -283,12 +296,12 @@ elif menu == "Torneos Eliminación Directa":
                         
                         with col_c1:
                             st.markdown(f"""
-                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #f8fbff; margin-bottom: 2px;">
+                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #2D3748; color: #FFFFFF; margin-bottom: 2px;">
                                 <b>{j1}</b>
                             </div>
                             """, unsafe_allow_html=True)
                             st.markdown(f"""
-                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #f8fbff;">
+                            <div style="border: 1px solid #4a90e2; padding: 8px; border-radius: 4px; background-color: #2D3748; color: #FFFFFF;">
                                 <b>{j2}</b>
                             </div>
                             """, unsafe_allow_html=True)
@@ -317,7 +330,6 @@ elif menu == "Torneos Eliminación Directa":
                                 ganador = j1
                                 st.markdown(f"➡️ **Avanza:** `{j1}`")
                             else:
-                                # Evaluar por mesas ganadas guardadas
                                 m_guardadas = st.session_state.ed_mesas.get(key_res, (0, 0))
                                 mg1, mg2 = m_guardadas[0], m_guardadas[1]
                                 
@@ -424,7 +436,7 @@ elif menu == "Torneos Eliminación Directa":
 
             t = Table(data_tabla, colWidths=[120, 240, 120, 200])
             t.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000000')),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4e78')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -432,7 +444,7 @@ elif menu == "Torneos Eliminación Directa":
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#000000')]),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f5f8')]),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('TOPPADDING', (0, 1), (-1, -1), 5),
