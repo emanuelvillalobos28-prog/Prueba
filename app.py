@@ -43,12 +43,7 @@ if menu == "Todos contra Todos":
     st.subheader("Modalidad: Todos contra todos (Round-Robin)")
 
     if "jugadores" not in st.session_state:
-        st.session_state.jugadores = [
-            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
-            "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-            "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
-            "Pablo Díaz", "Carlos López", "Mario Ordóñez"
-        ]
+        st.session_state.jugadores = []
 
     if "resultados_partidas" not in st.session_state:
         st.session_state.resultados_partidas = {}
@@ -233,12 +228,7 @@ elif menu == "Torneos Eliminación Directa":
     st.subheader("Modalidad: Eliminación Directa (Single Elimination)")
 
     if "jugadores_ed" not in st.session_state:
-        st.session_state.jugadores_ed = [
-            "The Underdogs", "Serve Aces Wild", "Bye Bye Birdies", "Smash Bros.",
-            "Court Jesters", "Sets on the Beach", "Game of Throws", "Paddle Snakes",
-            "Netflix & Win", "Spin Doctors", "Net Results", "Ball Busters",
-            "Shank You Very Much", "The Rally Tally", "Hit Happens"
-        ]
+        st.session_state.jugadores_ed = []
 
     if "ed_mesas" not in st.session_state:
         st.session_state.ed_mesas = {}
@@ -687,13 +677,7 @@ elif menu == "Torneos Doble Eliminación":
     st.subheader("Modalidad: Doble Eliminación (Con repechaje y muerte súbita desde Octavos)")
 
     if "jugadores_dd" not in st.session_state:
-        st.session_state.jugadores_dd = [
-            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
-            "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-            "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
-            "Pablo Díaz", "Carlos López", "Mario Ordóñez",
-            "Luis Pérez", "Roberto Gómez", "Mario Bros", "Luigi Bros"
-        ]
+        st.session_state.jugadores_dd = []
 
     if "dd_mesas_w" not in st.session_state:
         st.session_state.dd_mesas_w = {}
