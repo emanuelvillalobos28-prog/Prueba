@@ -432,7 +432,7 @@ elif menu == "Torneos Eliminación Directa":
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f5f8')]),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#000000')]),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('TOPPADDING', (0, 1), (-1, -1), 5),
