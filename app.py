@@ -62,7 +62,25 @@ if menu == "Todos contra Todos":
     if sub_menu_todos == "Registro y Gestión de Jugadores":
         st.markdown("### 📝 Gestión de Participantes (Todos contra Todos)")
         
-        nuevo_jugador = st.text_input("Nombre del Nuevo Jugador o Club:")
+        # Opción de ingreso masivo por bloque
+        with st.expander("📥 Ingreso masivo de participantes por bloque"):
+            st.write("Escribe o pega varios nombres de jugadores, uno por cada línea:")
+            bloque_jugadores = st.text_area("Lista de participantes (bloque)", key="bloque_todos")
+            if st.button("Guardar Bloque de Participantes"):
+                if bloque_jugadores:
+                    nombres = [n.strip() for n in bloque_jugadores.split("\n") if n.strip()]
+                    agregados = 0
+                    for nombre in nombres:
+                        if nombre not in st.session_state.jugadores:
+                            st.session_state.jugadores.append(nombre)
+                            agregados += 1
+                    st.success(f"¡Se agregaron {agregados} jugadores correctamente!")
+                    st.rerun()
+                else:
+                    st.warning("El cuadro de texto está vacío.")
+
+        st.markdown("---")
+        nuevo_jugador = st.text_input("Nombre del Nuevo Jugador o Club (Individual):")
         if st.button("Agregar Jugador"):
             if nuevo_jugador and nuevo_jugador not in st.session_state.jugadores:
                 st.session_state.jugadores.append(nuevo_jugador)
@@ -239,7 +257,25 @@ elif menu == "Torneos Eliminación Directa":
     if sub_menu_ed == "Gestión de Participantes":
         st.markdown("### 📝 Registro de Participantes - Eliminación Directa")
         
-        nuevo_j_ed = st.text_input("Nombre del Jugador o Equipo:")
+        # Opción de ingreso masivo por bloque
+        with st.expander("📥 Ingreso masivo de participantes por bloque"):
+            st.write("Escribe o pega varios nombres de participantes, uno por cada línea:")
+            bloque_ed = st.text_area("Lista de participantes ED (bloque)", key="bloque_ed_textarea")
+            if st.button("Guardar Bloque ED"):
+                if bloque_ed:
+                    nombres = [n.strip() for n in bloque_ed.split("\n") if n.strip()]
+                    agregados = 0
+                    for nombre in nombres:
+                        if nombre not in st.session_state.jugadores_ed:
+                            st.session_state.jugadores_ed.append(nombre)
+                            agregados += 1
+                    st.success(f"¡Se agregaron {agregados} participantes correctamente!")
+                    st.rerun()
+                else:
+                    st.warning("El cuadro de texto está vacío.")
+
+        st.markdown("---")
+        nuevo_j_ed = st.text_input("Nombre del Jugador o Equipo (Individual):")
         if st.button("Agregar Participante ED"):
             if nuevo_j_ed and nuevo_j_ed not in st.session_state.jugadores_ed:
                 st.session_state.jugadores_ed.append(nuevo_j_ed)
@@ -503,7 +539,6 @@ elif menu == "Torneos Eliminación Directa":
             elements.append(Paragraph("<b>Modalidad: Eliminación Directa</b>", subtitle_style))
             elements.append(Spacer(1, 5))
 
-            # Tabla de enfrentamientos
             jugadores = st.session_state.jugadores_ed
             next_power = 2 ** math.ceil(math.log2(max(2, len(jugadores))))
             num_byes = next_power - len(jugadores)
@@ -593,7 +628,6 @@ elif menu == "Torneos Eliminación Directa":
             elements.append(t)
             elements.append(Spacer(1, 15))
 
-            # Tabla de posiciones en PDF
             elements.append(Paragraph("<b>TABLA DE POSICIONES FINALES</b>", subtitle_style))
             ranking_final = []
             if campeon and campeon != "Pendiente":
@@ -679,7 +713,25 @@ elif menu == "Torneos Doble Eliminación":
     if sub_menu_dd == "Gestión de Participantes":
         st.markdown("### 📝 Registro de Participantes - Doble Eliminación")
         
-        nuevo_j_dd = st.text_input("Nombre del Jugador o Equipo (Doble Eliminación):")
+        # Opción de ingreso masivo por bloque
+        with st.expander("📥 Ingreso masivo de participantes por bloque"):
+            st.write("Escribe o pega varios nombres para Doble Eliminación, uno por cada línea:")
+            bloque_dd = st.text_area("Lista de participantes DD (bloque)", key="bloque_dd_textarea")
+            if st.button("Guardar Bloque DD"):
+                if bloque_dd:
+                    nombres = [n.strip() for n in bloque_dd.split("\n") if n.strip()]
+                    agregados = 0
+                    for nombre in nombres:
+                        if nombre not in st.session_state.jugadores_dd:
+                            st.session_state.jugadores_dd.append(nombre)
+                            agregados += 1
+                    st.success(f"¡Se agregaron {agregados} participantes correctamente!")
+                    st.rerun()
+                else:
+                    st.warning("El cuadro de texto está vacío.")
+
+        st.markdown("---")
+        nuevo_j_dd = st.text_input("Nombre del Jugador o Equipo (Individual):")
         if st.button("Agregar Participante DD"):
             if nuevo_j_dd and nuevo_j_dd not in st.session_state.jugadores_dd:
                 st.session_state.jugadores_dd.append(nuevo_j_dd)
@@ -729,7 +781,6 @@ elif menu == "Torneos Doble Eliminación":
 
             total_rondas_w = int(math.log2(next_power))
             
-            # --- SIMULACIÓN WINNERS BRACKET ---
             st.markdown("---")
             st.markdown("### 🟢 Bracket de Ganadores (Winners)")
             
@@ -791,12 +842,10 @@ elif menu == "Torneos Doble Eliminación":
                 perdedores_w_por_ronda[r] = perdedores_esta
                 ronda_actual_w = ganadores_esta
 
-            # --- SIMULACIÓN LOSERS BRACKET SIMPLIFICADO ---
             st.markdown("---")
             st.markdown("### 🔴 Bracket de Perdedores (Losers)")
             st.write("Los jugadores caídos de ganadores compiten aquí por mantenerse con vida.")
             
-            # Recolectar perdedores de la primera ronda de ganadores
             perdedores_r1 = perdedores_w_por_ronda.get(1, [])
             if perdedores_r1:
                 st.markdown(f"**Perdedores integrados desde Ronda 1 de Ganadores:** {', '.join(perdedores_r1)}")
@@ -811,7 +860,6 @@ elif menu == "Torneos Doble Eliminación":
         if len(jugadores) < 2:
             st.warning("Se necesitan al menos 2 participantes.")
         else:
-            # Listado base de posiciones estimado para doble eliminación
             datos_pos_dd = []
             for idx, j in enumerate(jugadores, 1):
                 if idx == 1:
