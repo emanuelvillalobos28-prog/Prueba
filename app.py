@@ -7,12 +7,7 @@ st.subheader("Modalidad: Todos contra todos (Round-Robin)")
 
 # Inicializar la lista de jugadores en el estado de la sesión si no existe
 if "jugadores" not in st.session_state:
-    st.session_state.jugadores = [
-        "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
-        "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-        "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
-        "Pablo Díaz", "Carlos López", "Mario Ordóñez"
-    ]
+    st.session_state.jugadores = []
 
 # Menú lateral para navegación
 menu = st.sidebar.selectbox("Menú Principal", ["Registro de Jugadores", "Generar Partidas y Semanas"])
