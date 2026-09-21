@@ -27,7 +27,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎱 Sistema de Torneos de Billar")
+st.title("🎱 Torneos de Billar")
 
 # Menú principal con las 3 modalidades solicitadas
 menu = st.sidebar.selectbox("Seleccione la Modalidad de Torneo", [
