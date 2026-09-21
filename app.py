@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import math
+import random
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -212,7 +213,11 @@ elif menu == "Torneos Eliminación Directa":
         ]
 
     if "ed_mesas" not in st.session_state:
-        st.session_state.ed_mesas = {}  # (ronda_idx, match_idx) -> (mesas_j1, mesas_j2)
+        st.session_state.ed_mesas = {}
+
+    # Semilla aleatoria fija por sesión para que el orden aleatorio de los BYEs no cambie al hacer clic en guardar
+    if "ed_seed" not in st.session_state:
+        st.session_state.ed_seed = random.randint(1, 1000000)
 
     sub_menu_ed = st.sidebar.radio("Secciones Eliminación Directa", [
         "Gestión de Participantes", 
@@ -234,6 +239,11 @@ elif menu == "Torneos Eliminación Directa":
             else:
                 st.info("El participante ya está en la lista.")
 
+        if st.button("🔀 Mezclar / Reordenar Aleatoriamente"):
+            st.session_state.ed_seed = random.randint(1, 1000000)
+            st.success("¡Participantes y pases libres reordenados aleatoriamente!")
+            st.rerun()
+
         st.markdown("---")
         st.markdown("### 📋 Lista Actual")
         if st.session_state.jugadores_ed:
@@ -250,20 +260,28 @@ elif menu == "Torneos Eliminación Directa":
 
     elif sub_menu_ed == "Cuadro Estilo Llaves y Resultados":
         st.markdown("### 🏆 Cuadro Oficial de Eliminación Directa")
-        st.write("Visualización exacta en celdas por enfrentamiento. Ingresa las mesas ganadas para definir quién avanza automáticamente.")
+        st.write("Visualización exacta en celdas por enfrentamiento. Los BYEs se distribuyen de forma aleatoria.")
 
         jugadores = st.session_state.jugadores_ed
         if len(jugadores) < 2:
             st.warning("Se necesitan al menos 2 participantes para generar el cuadro.")
         else:
             next_power = 2 ** math.ceil(math.log2(len(jugadores)))
-            lista_padded = list(jugadores)
-            while len(lista_padded) < next_power:
-                lista_padded.append("BYE")
+            num_byes = next_power - len(jugadores)
+            
+            # Mezclar de forma determinista usando la semilla de la sesión
+            lista_mezclada = list(jugadores)
+            rnd = random.Random(st.session_state.ed_seed)
+            rnd.shuffle(lista_mezclada)
+            
+            # Insertar los BYEs de forma aleatoria en la lista
+            for _ in range(num_byes):
+                pos_aleatoria = rnd.randint(0, len(lista_mezclada))
+                lista_mezclada.insert(pos_aleatoria, "BYE")
 
             total_rondas = int(math.log2(next_power))
             
-            ronda_actual_equipos = lista_padded
+            ronda_actual_equipos = lista_mezclada
             ganadores_por_ronda = []
 
             for r in range(1, total_rondas + 1):
@@ -387,19 +405,24 @@ elif menu == "Torneos Eliminación Directa":
             )
 
             elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO DE BILLAR</b>", title_style))
-            elements.append(Paragraph("<b>Modalidad: Eliminación Directa (Cuadro Completo con celdas y BYE)</b>", subtitle_style))
+            elements.append(Paragraph("<b>Modalidad: Eliminación Directa (Cuadro Completo con celdas y BYE aleatorios)</b>", subtitle_style))
             elements.append(Spacer(1, 10))
 
             jugadores = st.session_state.jugadores_ed
             next_power = 2 ** math.ceil(math.log2(max(2, len(jugadores))))
-            lista_padded = list(jugadores)
-            while len(lista_padded) < next_power:
-                lista_padded.append("BYE")
+            num_byes = next_power - len(jugadores)
+            
+            lista_mezclada = list(jugadores)
+            rnd = random.Random(st.session_state.ed_seed)
+            rnd.shuffle(lista_mezclada)
+            for _ in range(num_byes):
+                pos_aleatoria = rnd.randint(0, len(lista_mezclada))
+                lista_mezclada.insert(pos_aleatoria, "BYE")
 
             total_rondas = int(math.log2(next_power))
             data_tabla = [["Fase", "Encuentro / Celda", "Marcador (Mesas)", "Ganador / Avanza"]]
             
-            ronda_actual = lista_padded
+            ronda_actual = lista_mezclada
             for r in range(1, total_rondas + 1):
                 fase_nombre = f"Ronda {r}"
                 if r == total_rondas:
