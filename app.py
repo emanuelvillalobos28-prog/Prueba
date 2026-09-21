@@ -62,7 +62,6 @@ if menu == "Todos contra Todos":
     if sub_menu_todos == "Registro y Gestión de Jugadores":
         st.markdown("### 📝 Gestión de Participantes (Todos contra Todos)")
         
-        # Opción de ingreso masivo por bloque
         with st.expander("📥 Ingreso masivo de participantes por bloque"):
             st.write("Escribe o pega varios nombres de jugadores, uno por cada línea:")
             bloque_jugadores = st.text_area("Lista de participantes (bloque)", key="bloque_todos")
@@ -257,7 +256,6 @@ elif menu == "Torneos Eliminación Directa":
     if sub_menu_ed == "Gestión de Participantes":
         st.markdown("### 📝 Registro de Participantes - Eliminación Directa")
         
-        # Opción de ingreso masivo por bloque
         with st.expander("📥 Ingreso masivo de participantes por bloque"):
             st.write("Escribe o pega varios nombres de participantes, uno por cada línea:")
             bloque_ed = st.text_area("Lista de participantes ED (bloque)", key="bloque_ed_textarea")
@@ -515,8 +513,7 @@ elif menu == "Torneos Eliminación Directa":
 
     elif sub_menu_ed == "Exportar Cuadro a PDF":
         st.markdown("### 📄 Generar Reporte Completo en PDF (Incluye Posiciones)")
-        st.write("Haz clic en el botón para compilar el cuadro de llaves y la tabla de posiciones finales en un reporte profesional.")
-
+        
         def generar_pdf_cuadro():
             buffer = io.BytesIO()
             doc = SimpleDocTemplate(buffer, pagesize=landscape(letter),
@@ -687,13 +684,15 @@ elif menu == "Torneos Eliminación Directa":
 # 3. TORNEOS DOBLE ELIMINACIÓN
 # ==========================================
 elif menu == "Torneos Doble Eliminación":
-    st.subheader("Modalidad: Doble Eliminación (Double Elimination)")
+    st.subheader("Modalidad: Doble Eliminación (Con repechaje y muerte súbita desde Octavos)")
 
     if "jugadores_dd" not in st.session_state:
         st.session_state.jugadores_dd = [
             "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
             "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-            "Rogelio Ramos", "Mynor García"
+            "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
+            "Pablo Díaz", "Carlos López", "Mario Ordóñez",
+            "Luis Pérez", "Roberto Gómez", "Mario Bros", "Luigi Bros"
         ]
 
     if "dd_mesas_w" not in st.session_state:
@@ -705,7 +704,7 @@ elif menu == "Torneos Doble Eliminación":
 
     sub_menu_dd = st.sidebar.radio("Secciones Doble Eliminación", [
         "Gestión de Participantes", 
-        "Cuadro de Ganadores y Perdedores",
+        "Cuadro de Ganadores, Perdedores y Muerte Súbita",
         "Tabla de Posiciones Finales",
         "Exportar Doble Eliminación a PDF"
     ])
@@ -713,7 +712,6 @@ elif menu == "Torneos Doble Eliminación":
     if sub_menu_dd == "Gestión de Participantes":
         st.markdown("### 📝 Registro de Participantes - Doble Eliminación")
         
-        # Opción de ingreso masivo por bloque
         with st.expander("📥 Ingreso masivo de participantes por bloque"):
             st.write("Escribe o pega varios nombres para Doble Eliminación, uno por cada línea:")
             bloque_dd = st.text_area("Lista de participantes DD (bloque)", key="bloque_dd_textarea")
@@ -761,9 +759,9 @@ elif menu == "Torneos Doble Eliminación":
         else:
             st.info("No hay participantes inscritos.")
 
-    elif sub_menu_dd == "Cuadro de Ganadores y Perdedores":
-        st.markdown("### ⚡ Estructura de Doble Eliminación (Winner & Losers Bracket)")
-        st.write("Los perdedores de las llaves principales caen al cuadro de perdedores buscando una segunda oportunidad.")
+    elif sub_menu_dd == "Cuadro de Ganadores, Perdedores y Muerte Súbita":
+        st.markdown("### ⚡ Estructura: Doble Oportunidad hasta Octavos y Muerte Súbita")
+        st.write("• **Fases Preliminares:** Los perdedores caen al cuadro de perdedores para obtener su segunda oportunidad.\n• **A partir de Octavos de Final (o la fase correspondiente):** Los encuentros pasan a ser de **eliminación directa / muerte súbita** sin derecho a otra oportunidad.")
 
         jugadores = st.session_state.jugadores_dd
         if len(jugadores) < 2:
@@ -779,21 +777,41 @@ elif menu == "Torneos Doble Eliminación":
                 pos_aleatoria = rnd.randint(0, len(lista_mezclada))
                 lista_mezclada.insert(pos_aleatoria, "BYE")
 
-            total_rondas_w = int(math.log2(next_power))
+            total_rondas = int(math.log2(next_power))
             
+            # ----------------------------------------------------
+            # SIMULACIÓN / RASTREO DEL BRACKET DE GANADORES Y PERDEDORES
+            # ----------------------------------------------------
             st.markdown("---")
-            st.markdown("### 🟢 Bracket de Ganadores (Winners)")
+            st.markdown("### 🟢 Bracket Principal (Winners)")
             
             ronda_actual_w = lista_mezclada
-            ganadores_w_por_ronda = {}
-            perdedores_w_por_ronda = {}
+            perdedores_por_ronda = {}
+            ganadores_por_ronda = {}
 
-            for r in range(1, total_rondas_w + 1):
+            for r in range(1, total_rondas + 1):
                 partidos = len(ronda_actual_w) // 2
                 ganadores_esta = []
                 perdedores_esta = []
                 
-                st.markdown(f"#### Winners - Ronda {r}")
+                # Definir si estamos en zona de muerte súbita (Octavos o menor tamaño de llave equivalente)
+                tam_fase = next_power // (2**(r-1))
+                es_muerte_subita = tam_fase <= 16  # Octavos de final o instancias más adelantadas
+
+                fase_lbl = f"Winners - Ronda {r} (Llave de {tam_fase})"
+                if tam_fase == 16:
+                    fase_lbl = "🟢 Octavos de Final (Zona de Muerte Súbita)"
+                elif tam_fase == 8:
+                    fase_lbl = "⚡ Cuartos de Final (Muerte Súbita)"
+                elif tam_fase == 4:
+                    fase_lbl = "🔥 Semifinales (Muerte Súbita)"
+                elif tam_fase == 2:
+                    fase_lbl = "🏆 Gran Final"
+
+                st.markdown(f"#### {fase_lbl}")
+                if es_muerte_subita and tam_fase <= 16:
+                    st.info("⚠️ **Fase de Muerte Súbita activa:** Los perdedores quedan eliminados definitivamente del torneo.")
+
                 for idx in range(partidos):
                     j1 = ronda_actual_w[idx * 2]
                     j2 = ronda_actual_w[idx * 2 + 1]
@@ -809,9 +827,9 @@ elif menu == "Torneos Doble Eliminación":
                         elif j2 == "BYE":
                             mw1, mw2 = 1, 0
                         else:
-                            mw1 = st.number_input(f"Mesas {j1} (W R{r} G{idx})", min_value=0, value=datos_prev[0], key=f"w_r{r}_m{idx}_1", label_visibility="collapsed")
-                            mw2 = st.number_input(f"Mesas {j2} (W R{r} G{idx})", min_value=0, value=datos_prev[1], key=f"w_r{r}_m{idx}_2", label_visibility="collapsed")
-                            if st.button("Guardar W", key=f"btn_w_r{r}_m{idx}"):
+                            mw1 = st.number_input(f"Mesas {j1} (R{r} G{idx})", min_value=0, value=datos_prev[0], key=f"dd_w_r{r}_m{idx}_1", label_visibility="collapsed")
+                            mw2 = st.number_input(f"Mesas {j2} (R{r} G{idx})", min_value=0, value=datos_prev[1], key=f"dd_w_r{r}_m{idx}_2", label_visibility="collapsed")
+                            if st.button("Guardar", key=f"btn_dd_w_r{r}_m{idx}"):
                                 st.session_state.dd_mesas_w[key_res] = (mw1, mw2)
                                 st.success("¡Guardado!")
                                 st.rerun()
@@ -831,30 +849,50 @@ elif menu == "Torneos Doble Eliminación":
                                 g, p = j2, j1
                                 st.success(f"Ganador: {j2}")
                             else:
-                                g, p = f"Pendiente W{r}G{idx}", None
-                                st.warning("Pendiente")
+                                g, p = f"Pendiente R{r}G{idx}", None
+                                st.warning("Pendiente de resultado")
 
                     ganadores_esta.append(g)
                     if p and p != "BYE":
-                        perdedores_esta.append(p)
+                        perdedores_esta.append((p, es_muerte_subita))
 
-                ganadores_w_por_ronda[r] = ganadores_esta
-                perdedores_w_por_ronda[r] = perdedores_esta
+                ganadores_por_ronda[r] = ganadores_esta
+                perdedores_por_ronda[r] = perdedores_esta
                 ronda_actual_w = ganadores_esta
 
+            # ----------------------------------------------------
+            # RONDAS DE PERDEDORES / REPECHAJE (LOSERS BRACKET)
+            # ----------------------------------------------------
             st.markdown("---")
-            st.markdown("### 🔴 Bracket de Perdedores (Losers)")
-            st.write("Los jugadores caídos de ganadores compiten aquí por mantenerse con vida.")
-            
-            perdedores_r1 = perdedores_w_por_ronda.get(1, [])
-            if perdedores_r1:
-                st.markdown(f"**Perdedores integrados desde Ronda 1 de Ganadores:** {', '.join(perdedores_r1)}")
+            st.markdown("### 🔴 Cuadro de Perdedores (Losers Bracket & Repechaje)")
+            st.write("Los participantes caídos en rondas previas a octavos disputan aquí su segunda oportunidad. Los perdedores en octavos o fases posteriores quedan eliminados definitivamente.")
+
+            # Recopilar caídos con derecho a segunda oportunidad
+            con_segunda_oportunidad = []
+            eliminados_definitivos = []
+
+            for r_idx, lista_p in perdedores_por_ronda.items():
+                for participante, es_ms in lista_p:
+                    if not es_ms:
+                        con_segunda_oportunidad.append(participante)
+                    else:
+                        eliminados_definitivos.append(participante)
+
+            if con_segunda_oportunidad:
+                st.write(f"🔄 **Jugadores activos en la Ronda de Perdedores (buscando segunda oportunidad):**")
+                for jp in con_segunda_oportunidad:
+                    st.markdown(f"- `{jp}`")
             else:
-                st.info("A la espera de resultados en Ganadores para alimentar el cuadro de perdedores.")
+                st.info("A la espera de resultados en el cuadro principal para alimentar la llave de perdedores.")
+
+            if eliminados_definitivos:
+                st.write(f"❌ **Jugadores eliminados por completo (derrotados en zona de Muerte Súbita / Octavos en adelante):**")
+                for jde in eliminados_definitivos:
+                    st.markdown(f"- `{jde}`")
 
     elif sub_menu_dd == "Tabla de Posiciones Finales":
         st.markdown("### 🥇 Tabla de Posiciones Finales (Doble Eliminación)")
-        st.write("Clasificación general para la modalidad de doble eliminación.")
+        st.write("Clasificación general considerando el desempeño en ambas llaves y la fase de muerte súbita.")
         
         jugadores = st.session_state.jugadores_dd
         if len(jugadores) < 2:
@@ -892,7 +930,7 @@ elif menu == "Torneos Doble Eliminación":
             subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Heading2'], fontSize=11, textColor=colors.HexColor('#333333'), spaceAfter=10)
 
             elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO DE BILLAR</b>", title_style))
-            elements.append(Paragraph("<b>Modalidad: Doble Eliminación (Ganadores y Perdedores)</b>", subtitle_style))
+            elements.append(Paragraph("<b>Modalidad: Doble Eliminación (Con Repechaje y Muerte Súbita desde Octavos)</b>", subtitle_style))
             elements.append(Spacer(1, 10))
 
             jugadores = st.session_state.jugadores_dd
