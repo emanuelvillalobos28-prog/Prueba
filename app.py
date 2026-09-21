@@ -184,7 +184,6 @@ if menu == "Todos contra Todos":
 
             datos_tabla = []
             for pos, (jugador, stats) in enumerate(tabla_ordenada, 1):
-                # Asignar etiqueta descriptiva de lugar
                 if pos == 1:
                     puesto_str = "1° (Campeón)"
                 elif pos == 2:
@@ -401,9 +400,6 @@ elif menu == "Torneos Eliminación Directa":
                 lista_mezclada.insert(pos_aleatoria, "BYE")
 
             total_rondas = int(math.log2(next_power))
-            
-            # Recolectar eliminados por ronda para armar el ranking
-            # Estructura: ronda_eliminacion -> lista de jugadores
             eliminados_por_ronda = {r: [] for r in range(1, total_rondas + 1)}
             campeon = None
             subcampeon = None
@@ -441,7 +437,6 @@ elif menu == "Torneos Eliminación Directa":
                 if r == total_rondas:
                     if len(siguiente_nivel) == 1 and "Pendiente" not in siguiente_nivel[0]:
                         campeon = siguiente_nivel[0]
-                        # El perdedor de la final es el subcampeón
                         if perdedores_ronda:
                             subcampeon = perdedores_ronda[0]
                     eliminados_por_ronda[r] = perdedores_ronda
@@ -450,16 +445,13 @@ elif menu == "Torneos Eliminación Directa":
 
                 ronda_actual = siguiente_nivel
 
-            # Construir la lista de posiciones ordenadas de mayor a menor jerarquía
             ranking_final = []
             if campeon and campeon != "Pendiente":
                 ranking_final.append((1, "1° (Campeón)", campeon))
             if subcampeon and subcampeon != "Pendiente":
                 ranking_final.append((2, "2° (Subcampeón)", subcampeon))
 
-            # Rondas anteriores (semifinalistas eliminados van a 3er/4to lugar, etc.)
-            puesto_actual = 3 if not subcampeon else 3
-            # Recorrer desde la semifinal hacia atrás
+            puesto_actual = 3
             for r in range(total_rondas - 1, 0, -1):
                 perdedores = eliminados_por_ronda.get(r, [])
                 for p in perdedores:
@@ -467,13 +459,11 @@ elif menu == "Torneos Eliminación Directa":
                         ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", p))
                         puesto_actual += 1
 
-            # Añadir cualquier participante faltante que no se haya procesado
             for j in jugadores:
                 if j not in [x[2] for x in ranking_final]:
                     ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", j))
                     puesto_actual += 1
 
-            # Ordenar por número de puesto
             ranking_final.sort(key=lambda x: x[0])
 
             datos_posiciones = []
@@ -488,8 +478,8 @@ elif menu == "Torneos Eliminación Directa":
             st.dataframe(df_ed_pos, use_container_width=True, hide_index=True)
 
     elif sub_menu_ed == "Exportar Cuadro a PDF":
-        st.markdown("### 📄 Generar Reporte de Llaves en PDF (Formato Horizontal)")
-        st.write("Haz clic en el botón para compilar todo el cuadro de eliminación directa y sus celdas en un reporte profesional.")
+        st.markdown("### 📄 Generar Reporte Completo en PDF (Incluye Posiciones)")
+        st.write("Haz clic en el botón para compilar el cuadro de llaves y la tabla de posiciones finales en un reporte profesional.")
 
         def generar_pdf_cuadro():
             buffer = io.BytesIO()
@@ -501,26 +491,19 @@ elif menu == "Torneos Eliminación Directa":
             styles = getSampleStyleSheet()
             
             title_style = ParagraphStyle(
-                'TitleStyle',
-                parent=styles['Heading1'],
-                fontSize=18,
-                textColor=colors.HexColor('#1f4e78'),
-                alignment=1,
-                spaceAfter=10
+                'TitleStyle', parent=styles['Heading1'], fontSize=16,
+                textColor=colors.HexColor('#1f4e78'), alignment=1, spaceAfter=8
             )
-            
             subtitle_style = ParagraphStyle(
-                'SubTitleStyle',
-                parent=styles['Heading2'],
-                fontSize=12,
-                textColor=colors.HexColor('#333333'),
-                spaceAfter=10
+                'SubTitleStyle', parent=styles['Heading2'], fontSize=11,
+                textColor=colors.HexColor('#333333'), spaceAfter=10
             )
 
             elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO DE BILLAR</b>", title_style))
-            elements.append(Paragraph("<b>Modalidad: Eliminación Directa (Cuadro Completo con celdas y BYE aleatorios)</b>", subtitle_style))
-            elements.append(Spacer(1, 10))
+            elements.append(Paragraph("<b>Modalidad: Eliminación Directa</b>", subtitle_style))
+            elements.append(Spacer(1, 5))
 
+            # Tabla de enfrentamientos
             jugadores = st.session_state.jugadores_ed
             next_power = 2 ** math.ceil(math.log2(max(2, len(jugadores))))
             num_byes = next_power - len(jugadores)
@@ -535,6 +518,10 @@ elif menu == "Torneos Eliminación Directa":
             total_rondas = int(math.log2(next_power))
             data_tabla = [["Fase", "Encuentro / Celda", "Marcador (Mesas)", "Ganador / Avanza"]]
             
+            eliminados_por_ronda = {r: [] for r in range(1, total_rondas + 1)}
+            campeon = None
+            subcampeon = None
+
             ronda_actual = lista_mezclada
             for r in range(1, total_rondas + 1):
                 fase_nombre = f"Ronda {r}"
@@ -546,6 +533,7 @@ elif menu == "Torneos Eliminación Directa":
                     fase_nombre = "Cuartos de Final"
 
                 siguiente_nivel = []
+                perdedores_ronda = []
                 for idx in range(len(ronda_actual) // 2):
                     j1 = ronda_actual[idx * 2]
                     j2 = ronda_actual[idx * 2 + 1]
@@ -553,50 +541,110 @@ elif menu == "Torneos Eliminación Directa":
                     if j1 == "BYE":
                         win = j2
                         marc = "Pase directo"
+                        perdedor = None
                     elif j2 == "BYE":
                         win = j1
                         marc = "Pase directo"
+                        perdedor = None
                     else:
                         m_val = st.session_state.ed_mesas.get((r, idx), (0, 0))
                         marc = f"{m_val[0]} - {m_val[1]}"
                         if m_val[0] > m_val[1]:
                             win = j1
+                            perdedor = j2
                         elif m_val[1] > m_val[0]:
                             win = j2
+                            perdedor = j1
                         else:
                             win = "Pendiente"
+                            perdedor = None
                             
+                    if perdedor and perdedor != "BYE":
+                        perdedores_ronda.append(perdedor)
                     data_tabla.append([fase_nombre, f"{j1}\nvs\n{j2}", marc, win])
                     siguiente_nivel.append(win)
+
+                if r == total_rondas:
+                    if len(siguiente_nivel) == 1 and "Pendiente" not in siguiente_nivel[0]:
+                        campeon = siguiente_nivel[0]
+                        if perdedores_ronda:
+                            subcampeon = perdedores_ronda[0]
+                    eliminados_por_ronda[r] = perdedores_ronda
+                else:
+                    eliminados_por_ronda[r] = perdedores_ronda
+
                 ronda_actual = siguiente_nivel
 
-            t = Table(data_tabla, colWidths=[120, 240, 120, 200])
+            t = Table(data_tabla, colWidths=[110, 250, 110, 190])
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4e78')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f5f8')]),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('TOPPADDING', (0, 1), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
+                ('FONTSIZE', (0, 1), (-1, -1), 8.5),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
             ]))
-
             elements.append(t)
+            elements.append(Spacer(1, 15))
+
+            # Tabla de posiciones en PDF
+            elements.append(Paragraph("<b>TABLA DE POSICIONES FINALES</b>", subtitle_style))
+            ranking_final = []
+            if campeon and campeon != "Pendiente":
+                ranking_final.append((1, "1° (Campeón)", campeon))
+            if subcampeon and subcampeon != "Pendiente":
+                ranking_final.append((2, "2° (Subcampeón)", subcampeon))
+
+            puesto_actual = 3
+            for r in range(total_rondas - 1, 0, -1):
+                perdedores = eliminados_por_ronda.get(r, [])
+                for p in perdedores:
+                    if p not in [x[2] for x in ranking_final] and p != campeon and p != subcampeon:
+                        ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", p))
+                        puesto_actual += 1
+
+            for j in jugadores:
+                if j not in [x[2] for x in ranking_final]:
+                    ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", j))
+                    puesto_actual += 1
+
+            ranking_final.sort(key=lambda x: x[0])
+            data_pos_pdf = [["Posición", "Participante / Equipo"]]
+            for item in ranking_final:
+                data_pos_pdf.append([item[1], item[2]])
+
+            t_pos = Table(data_pos_pdf, colWidths=[150, 510])
+            t_pos.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E7D32')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#e8f5e9')]),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8.5),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+            ]))
+            elements.append(t_pos)
+
             doc.build(elements)
             buffer.seek(0)
             return buffer
 
         pdf_buffer = generar_pdf_cuadro()
         st.download_button(
-            label="📥 Descargar Cuadro Completo en PDF",
+            label="📥 Descargar Reporte Completo en PDF",
             data=pdf_buffer,
-            file_name="Cuadro_Eliminacion_Directa.pdf",
+            file_name="Reporte_Eliminacion_Directa.pdf",
             mime="application/pdf"
         )
 
@@ -608,36 +656,227 @@ elif menu == "Torneos Doble Eliminación":
     st.subheader("Modalidad: Doble Eliminación (Double Elimination)")
 
     if "jugadores_dd" not in st.session_state:
-        st.session_state.jugadores_dd = []
+        st.session_state.jugadores_dd = [
+            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
+            "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
+            "Rogelio Ramos", "Mynor García"
+        ]
 
-    st.markdown("### 📝 Registro de Participantes - Doble Eliminación")
-    nuevo_j_dd = st.text_input("Nombre del Jugador (Doble Eliminación):", key="input_dd")
-    if st.button("Agregar a Doble Eliminación"):
-        if nuevo_j_dd and nuevo_j_dd not in st.session_state.jugadores_dd:
-            st.session_state.jugadores_dd.append(nuevo_j_dd)
-            st.success(f"Agregado: {nuevo_j_dd}")
+    if "dd_mesas_w" not in st.session_state:
+        st.session_state.dd_mesas_w = {}
+    if "dd_mesas_l" not in st.session_state:
+        st.session_state.dd_mesas_l = {}
+    if "dd_seed" not in st.session_state:
+        st.session_state.dd_seed = random.randint(1, 1000000)
+
+    sub_menu_dd = st.sidebar.radio("Secciones Doble Eliminación", [
+        "Gestión de Participantes", 
+        "Cuadro de Ganadores y Perdedores",
+        "Tabla de Posiciones Finales",
+        "Exportar Doble Eliminación a PDF"
+    ])
+
+    if sub_menu_dd == "Gestión de Participantes":
+        st.markdown("### 📝 Registro de Participantes - Doble Eliminación")
+        
+        nuevo_j_dd = st.text_input("Nombre del Jugador o Equipo (Doble Eliminación):")
+        if st.button("Agregar Participante DD"):
+            if nuevo_j_dd and nuevo_j_dd not in st.session_state.jugadores_dd:
+                st.session_state.jugadores_dd.append(nuevo_j_dd)
+                st.success(f"Agregado: {nuevo_j_dd}")
+                st.rerun()
+            elif not nuevo_j_dd:
+                st.warning("Escribe un nombre válido.")
+            else:
+                st.info("El participante ya está en la lista.")
+
+        if st.button("🔀 Mezclar / Reordenar Aleatoriamente DD"):
+            st.session_state.dd_seed = random.randint(1, 1000000)
+            st.success("¡Participantes y pases libres reordenados aleatoriamente!")
             st.rerun()
-        elif not nuevo_j_dd:
-            st.warning("Ingresa un nombre válido.")
+
+        st.markdown("---")
+        st.markdown("### 📋 Lista Actual")
+        if st.session_state.jugadores_dd:
+            for idx, j in enumerate(list(st.session_state.jugadores_dd)):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.write(f"{idx+1}. {j}")
+                with col2:
+                    if st.button("🗑️", key=f"del_dd_{idx}"):
+                        st.session_state.jugadores_dd.remove(j)
+                        st.rerun()
         else:
-            st.info("El jugador ya está en la lista.")
+            st.info("No hay participantes inscritos.")
 
-    st.markdown("#### Participantes inscritos:")
-    if st.session_state.jugadores_dd:
-        for idx, j in enumerate(st.session_state.jugadores_dd, 1):
-            col1, col2 = st.columns([4, 1])
-            with col1:
-                st.write(f"{idx}. {j}")
-            with col2:
-                if st.button("Eliminar", key=f"del_dd_{idx}"):
-                    st.session_state.jugadores_dd.remove(j)
-                    st.rerun()
-    else:
-        st.info("No hay participantes registrados en esta modalidad.")
+    elif sub_menu_dd == "Cuadro de Ganadores y Perdedores":
+        st.markdown("### ⚡ Estructura de Doble Eliminación (Winner & Losers Bracket)")
+        st.write("Los perdedores de las llaves principales caen al cuadro de perdedores buscando una segunda oportunidad.")
 
-    st.markdown("---")
-    st.markdown("### ⚡ Cuadros de Ganadores y Perdedores")
-    if len(st.session_state.jugadores_dd) >= 2:
-        st.info("Próximamente: Estructura de Winner Bracket y Losers Bracket.")
-    else:
-        st.warning("Agrega al menos 2 jugadores para configurar el torneo de doble eliminación.")
+        jugadores = st.session_state.jugadores_dd
+        if len(jugadores) < 2:
+            st.warning("Se necesitan al menos 2 participantes para generar los cuadros.")
+        else:
+            next_power = 2 ** math.ceil(math.log2(len(jugadores)))
+            num_byes = next_power - len(jugadores)
+            
+            lista_mezclada = list(jugadores)
+            rnd = random.Random(st.session_state.dd_seed)
+            rnd.shuffle(lista_mezclada)
+            for _ in range(num_byes):
+                pos_aleatoria = rnd.randint(0, len(lista_mezclada))
+                lista_mezclada.insert(pos_aleatoria, "BYE")
+
+            total_rondas_w = int(math.log2(next_power))
+            
+            # --- SIMULACIÓN WINNERS BRACKET ---
+            st.markdown("---")
+            st.markdown("### 🟢 Bracket de Ganadores (Winners)")
+            
+            ronda_actual_w = lista_mezclada
+            ganadores_w_por_ronda = {}
+            perdedores_w_por_ronda = {}
+
+            for r in range(1, total_rondas_w + 1):
+                partidos = len(ronda_actual_w) // 2
+                ganadores_esta = []
+                perdedores_esta = []
+                
+                st.markdown(f"#### Winners - Ronda {r}")
+                for idx in range(partidos):
+                    j1 = ronda_actual_w[idx * 2]
+                    j2 = ronda_actual_w[idx * 2 + 1]
+                    key_res = (r, idx)
+                    datos_prev = st.session_state.dd_mesas_w.get(key_res, (0, 0))
+
+                    col1, col2, col3 = st.columns([3, 2, 3])
+                    with col1:
+                        st.markdown(f"**{j1}** 🆚 **{j2}**")
+                    with col2:
+                        if j1 == "BYE":
+                            mw1, mw2 = 0, 1
+                        elif j2 == "BYE":
+                            mw1, mw2 = 1, 0
+                        else:
+                            mw1 = st.number_input(f"Mesas {j1} (W R{r} G{idx})", min_value=0, value=datos_prev[0], key=f"w_r{r}_m{idx}_1", label_visibility="collapsed")
+                            mw2 = st.number_input(f"Mesas {j2} (W R{r} G{idx})", min_value=0, value=datos_prev[1], key=f"w_r{r}_m{idx}_2", label_visibility="collapsed")
+                            if st.button("Guardar W", key=f"btn_w_r{r}_m{idx}"):
+                                st.session_state.dd_mesas_w[key_res] = (mw1, mw2)
+                                st.success("¡Guardado!")
+                                st.rerun()
+                    with col3:
+                        if j1 == "BYE":
+                            g, p = j2, None
+                            st.info(f"Avanza: {j2}")
+                        elif j2 == "BYE":
+                            g, p = j1, None
+                            st.info(f"Avanza: {j1}")
+                        else:
+                            mg = st.session_state.dd_mesas_w.get(key_res, (0, 0))
+                            if mg[0] > mg[1]:
+                                g, p = j1, j2
+                                st.success(f"Ganador: {j1}")
+                            elif mg[1] > mg[0]:
+                                g, p = j2, j1
+                                st.success(f"Ganador: {j2}")
+                            else:
+                                g, p = f"Pendiente W{r}G{idx}", None
+                                st.warning("Pendiente")
+
+                    ganadores_esta.append(g)
+                    if p and p != "BYE":
+                        perdedores_esta.append(p)
+
+                ganadores_w_por_ronda[r] = ganadores_esta
+                perdedores_w_por_ronda[r] = perdedores_esta
+                ronda_actual_w = ganadores_esta
+
+            # --- SIMULACIÓN LOSERS BRACKET SIMPLIFICADO ---
+            st.markdown("---")
+            st.markdown("### 🔴 Bracket de Perdedores (Losers)")
+            st.write("Los jugadores caídos de ganadores compiten aquí por mantenerse con vida.")
+            
+            # Recolectar perdedores de la primera ronda de ganadores
+            perdedores_r1 = perdedores_w_por_ronda.get(1, [])
+            if perdedores_r1:
+                st.markdown(f"**Perdedores integrados desde Ronda 1 de Ganadores:** {', '.join(perdedores_r1)}")
+            else:
+                st.info("A la espera de resultados en Ganadores para alimentar el cuadro de perdedores.")
+
+    elif sub_menu_dd == "Tabla de Posiciones Finales":
+        st.markdown("### 🥇 Tabla de Posiciones Finales (Doble Eliminación)")
+        st.write("Clasificación general para la modalidad de doble eliminación.")
+        
+        jugadores = st.session_state.jugadores_dd
+        if len(jugadores) < 2:
+            st.warning("Se necesitan al menos 2 participantes.")
+        else:
+            # Listado base de posiciones estimado para doble eliminación
+            datos_pos_dd = []
+            for idx, j in enumerate(jugadores, 1):
+                if idx == 1:
+                    p = "1° (Campeón)"
+                elif idx == 2:
+                    p = "2° (Subcampeón)"
+                elif idx == 3:
+                    p = "3° Puesto"
+                elif idx == 4:
+                    p = "4° Puesto"
+                else:
+                    p = f"{idx}° Puesto"
+                datos_pos_dd.append({"Posición": p, "Participante / Equipo": j})
+            
+            df_dd_pos = pd.DataFrame(datos_pos_dd)
+            st.dataframe(df_dd_pos, use_container_width=True, hide_index=True)
+
+    elif sub_menu_dd == "Exportar Doble Eliminación a PDF":
+        st.markdown("### 📄 Generar Reporte de Doble Eliminación en PDF")
+        
+        def generar_pdf_dd():
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(letter),
+                                    rightMargin=30, leftMargin=30,
+                                    topMargin=30, bottomMargin=30)
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#1f4e78'), alignment=1, spaceAfter=8)
+            subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Heading2'], fontSize=11, textColor=colors.HexColor('#333333'), spaceAfter=10)
+
+            elements.append(Paragraph("<b>REPORTE OFICIAL - TORNEO DE BILLAR</b>", title_style))
+            elements.append(Paragraph("<b>Modalidad: Doble Eliminación (Ganadores y Perdedores)</b>", subtitle_style))
+            elements.append(Spacer(1, 10))
+
+            jugadores = st.session_state.jugadores_dd
+            data_pdf = [["Posición", "Participante / Equipo"]]
+            for idx, j in enumerate(jugadores, 1):
+                p_str = "1° (Campeón)" if idx==1 else ("2° (Subcampeón)" if idx==2 else f"{idx}° Puesto")
+                data_pdf.append([p_str, j])
+
+            t_dd = Table(data_pdf, colWidths=[150, 510])
+            t_dd.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f4e78')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f2f5f8')]),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('TOPPADDING', (0, 1), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
+            ]))
+            elements.append(t_dd)
+            doc.build(elements)
+            buffer.seek(0)
+            return buffer
+
+        pdf_buf = generar_pdf_dd()
+        st.download_button(
+            label="📥 Descargar Reporte Doble Eliminación en PDF",
+            data=pdf_buf,
+            file_name="Reporte_Doble_Eliminacion.pdf",
+            mime="application/pdf"
+        )
