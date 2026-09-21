@@ -187,10 +187,8 @@ elif menu == "Torneos Eliminación Directa":
 
     if "jugadores_ed" not in st.session_state:
         st.session_state.jugadores_ed = [
-            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
-            "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-            "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
-            "Pablo Díaz", "Carlos López", "Mario Ordóñez"
+            "Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina", "Daniel Duarte",
+            "Saúl Ventura", "Jorge Castañeda", "Rogelio Ramos", "Mynor García"
         ]
 
     if "ed_ganadores" not in st.session_state:
@@ -437,10 +435,7 @@ elif menu == "Torneos Doble Eliminación":
     st.subheader("Modalidad: Doble Eliminación (Double Elimination)")
 
     if "jugadores_dd" not in st.session_state:
-        st.session_state.jugadores_dd = ["Emanuel Villalobos", "Alejandro Breganza", "Bryan Molina",
-            "Daniel Duarte", "Saúl Ventura", "Jorge Castañeda",
-            "Rogelio Ramos", "Mynor García", "Juan Carlos Pollo",
-            "Pablo Díaz", "Carlos López", "Mario Ordóñez"]
+        st.session_state.jugadores_dd = []
 
     st.markdown("### 📝 Registro de Participantes - Doble Eliminación")
     nuevo_j_dd = st.text_input("Nombre del Jugador (Doble Eliminación):", key="input_dd")
