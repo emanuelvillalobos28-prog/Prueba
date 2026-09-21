@@ -37,7 +37,7 @@ menu = st.sidebar.selectbox("Seleccione la Modalidad de Torneo", [
 ])
 
 # ==========================================
-# 1. TODOS CONTRA TODOS (100% Intacto)
+# 1. TODOS CONTRA TODOS (Round-Robin)
 # ==========================================
 if menu == "Todos contra Todos":
     st.subheader("Modalidad: Todos contra todos (Round-Robin)")
@@ -151,7 +151,7 @@ if menu == "Todos contra Todos":
                         st.write("Sin enfrentamientos directos esta semana.")
 
     elif sub_menu_todos == "Tabla de Posiciones":
-        st.markdown("### 🏆 Tabla de Posiciones General")
+        st.markdown("### 🏆 Tabla de Posiciones General (1er, 2do, 3er Lugar...)")
         
         jugadores = st.session_state.jugadores
         if not jugadores:
@@ -184,14 +184,26 @@ if menu == "Todos contra Todos":
 
             datos_tabla = []
             for pos, (jugador, stats) in enumerate(tabla_ordenada, 1):
+                # Asignar etiqueta descriptiva de lugar
+                if pos == 1:
+                    puesto_str = "1° (Campeón)"
+                elif pos == 2:
+                    puesto_str = "2° (Subcampeón)"
+                elif pos == 3:
+                    puesto_str = "3° Puesto"
+                elif pos == 4:
+                    puesto_str = "4° Puesto"
+                else:
+                    puesto_str = f"{pos}° Puesto"
+
                 datos_tabla.append({
-                    "Pos": pos,
+                    "Posición": puesto_str,
                     "Jugador / Club": jugador,
                     "Puntos (Pts)": stats["Pts"],
                     "Encuentros Jugados (PJ)": stats["PJ"],
                     "Mesas Ganadas (MG)": stats["MG"],
                     "Mesas Perdidas (MP)": stats["MP"],
-                    "Diferencia de Mesas (DM)": stats["DM"]
+                    "Diferencia (DM)": stats["DM"]
                 })
                 
             df_posiciones = pd.DataFrame(datos_tabla)
@@ -215,13 +227,13 @@ elif menu == "Torneos Eliminación Directa":
     if "ed_mesas" not in st.session_state:
         st.session_state.ed_mesas = {}
 
-    # Semilla aleatoria fija por sesión para que el orden aleatorio de los BYEs no cambie al hacer clic en guardar
     if "ed_seed" not in st.session_state:
         st.session_state.ed_seed = random.randint(1, 1000000)
 
     sub_menu_ed = st.sidebar.radio("Secciones Eliminación Directa", [
         "Gestión de Participantes", 
         "Cuadro Estilo Llaves y Resultados",
+        "Tabla de Posiciones Finales",
         "Exportar Cuadro a PDF"
     ])
 
@@ -269,18 +281,14 @@ elif menu == "Torneos Eliminación Directa":
             next_power = 2 ** math.ceil(math.log2(len(jugadores)))
             num_byes = next_power - len(jugadores)
             
-            # Mezclar de forma determinista usando la semilla de la sesión
             lista_mezclada = list(jugadores)
             rnd = random.Random(st.session_state.ed_seed)
             rnd.shuffle(lista_mezclada)
-            
-            # Insertar los BYEs de forma aleatoria en la lista
             for _ in range(num_byes):
                 pos_aleatoria = rnd.randint(0, len(lista_mezclada))
                 lista_mezclada.insert(pos_aleatoria, "BYE")
 
             total_rondas = int(math.log2(next_power))
-            
             ronda_actual_equipos = lista_mezclada
             ganadores_por_ronda = []
 
@@ -373,6 +381,111 @@ elif menu == "Torneos Eliminación Directa":
             if len(ronda_actual_equipos) == 1 and "Pendiente" not in ronda_actual_equipos[0] and "Empate" not in ronda_actual_equipos[0]:
                 st.balloons()
                 st.success(f"🏆 ¡El Campeón Absoluto del Torneo es: {ronda_actual_equipos[0]}!")
+
+    elif sub_menu_ed == "Tabla de Posiciones Finales":
+        st.markdown("### 🥇 Tabla de Posiciones Finales (Eliminación Directa)")
+        st.write("Clasificación general ordenada desde el 1er lugar hasta el último puesto según la fase alcanzada.")
+
+        jugadores = st.session_state.jugadores_ed
+        if len(jugadores) < 2:
+            st.warning("Se necesitan al menos 2 participantes para calcular la tabla de posiciones.")
+        else:
+            next_power = 2 ** math.ceil(math.log2(len(jugadores)))
+            num_byes = next_power - len(jugadores)
+            
+            lista_mezclada = list(jugadores)
+            rnd = random.Random(st.session_state.ed_seed)
+            rnd.shuffle(lista_mezclada)
+            for _ in range(num_byes):
+                pos_aleatoria = rnd.randint(0, len(lista_mezclada))
+                lista_mezclada.insert(pos_aleatoria, "BYE")
+
+            total_rondas = int(math.log2(next_power))
+            
+            # Recolectar eliminados por ronda para armar el ranking
+            # Estructura: ronda_eliminacion -> lista de jugadores
+            eliminados_por_ronda = {r: [] for r in range(1, total_rondas + 1)}
+            campeon = None
+            subcampeon = None
+
+            ronda_actual = lista_mezclada
+            for r in range(1, total_rondas + 1):
+                siguiente_nivel = []
+                perdedores_ronda = []
+                for idx in range(len(ronda_actual) // 2):
+                    j1 = ronda_actual[idx * 2]
+                    j2 = ronda_actual[idx * 2 + 1]
+                    
+                    if j1 == "BYE":
+                        win = j2
+                        perdedor = None
+                    elif j2 == "BYE":
+                        win = j1
+                        perdedor = None
+                    else:
+                        m_val = st.session_state.ed_mesas.get((r, idx), (0, 0))
+                        if m_val[0] > m_val[1]:
+                            win = j1
+                            perdedor = j2
+                        elif m_val[1] > m_val[0]:
+                            win = j2
+                            perdedor = j1
+                        else:
+                            win = f"Pendiente R{r}G{idx+1}"
+                            perdedor = None
+                            
+                    if perdedor and perdedor != "BYE":
+                        perdedores_ronda.append(perdedor)
+                    siguiente_nivel.append(win)
+
+                if r == total_rondas:
+                    if len(siguiente_nivel) == 1 and "Pendiente" not in siguiente_nivel[0]:
+                        campeon = siguiente_nivel[0]
+                        # El perdedor de la final es el subcampeón
+                        if perdedores_ronda:
+                            subcampeon = perdedores_ronda[0]
+                    eliminados_por_ronda[r] = perdedores_ronda
+                else:
+                    eliminados_por_ronda[r] = perdedores_ronda
+
+                ronda_actual = siguiente_nivel
+
+            # Construir la lista de posiciones ordenadas de mayor a menor jerarquía
+            ranking_final = []
+            if campeon and campeon != "Pendiente":
+                ranking_final.append((1, "1° (Campeón)", campeon))
+            if subcampeon and subcampeon != "Pendiente":
+                ranking_final.append((2, "2° (Subcampeón)", subcampeon))
+
+            # Rondas anteriores (semifinalistas eliminados van a 3er/4to lugar, etc.)
+            puesto_actual = 3 if not subcampeon else 3
+            # Recorrer desde la semifinal hacia atrás
+            for r in range(total_rondas - 1, 0, -1):
+                perdedores = eliminados_por_ronda.get(r, [])
+                for p in perdedores:
+                    if p not in [x[2] for x in ranking_final] and p != campeon and p != subcampeon:
+                        ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", p))
+                        puesto_actual += 1
+
+            # Añadir cualquier participante faltante que no se haya procesado
+            for j in jugadores:
+                if j not in [x[2] for x in ranking_final]:
+                    ranking_final.append((puesto_actual, f"{puesto_actual}° Puesto", j))
+                    puesto_actual += 1
+
+            # Ordenar por número de puesto
+            ranking_final.sort(key=lambda x: x[0])
+
+            datos_posiciones = []
+            for item in ranking_final:
+                datos_posiciones.append({
+                    "Posición": item[1],
+                    "Participante / Equipo": item[2],
+                    "Modalidad": "Eliminación Directa"
+                })
+
+            df_ed_pos = pd.DataFrame(datos_posiciones)
+            st.dataframe(df_ed_pos, use_container_width=True, hide_index=True)
 
     elif sub_menu_ed == "Exportar Cuadro a PDF":
         st.markdown("### 📄 Generar Reporte de Llaves en PDF (Formato Horizontal)")
